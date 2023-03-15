@@ -1,0 +1,145 @@
+# squaring the data to correctly display dataset
+```{r}
+dim(seattleTop_2)
+```
+
+# checking out the column names--making sure there are no spaces or weird characters
+```{r}
+names(seattleTop_2)
+```
+# moving the column "name" to get a square matrix
+```{r}
+row.names(seattleTop_2)=seattleTop_2$name
+seattleTop_2$name=NULL
+dim(seattleTop_2)
+```
+# converting the data frame into a matrix
+```{r}
+seattleTop_2_Mx=as.matrix(seattleTop_2)
+```
+
+# ensuring that I have the correct package installed, then creating a network with igraph
+```{r}
+library(igraph)
+EliteNet=graph.adjacency(seattleTop_2_Mx,mode="undirected",weighted=NULL)
+```
+
+# didn't have igraph, so I installed it and reran the above code
+```{r}
+install.packages("igraph")
+```
+# checking how many nodes are in my network (aka individual users)
+```{r}
+vcount(EliteNet)
+```
+
+# counting the number of edges within my dataset, or how many boundaries connect to another
+```{r}
+ecount(EliteNet)
+```
+
+# plotting my network to see what it looks like
+```{r}
+plot.igraph(EliteNet,
+            vertex.color='lightyellow',
+              edge.color='lightgreen')
+```
+
+# can every node connect to another node? 
+# yes (see below). so, I do not need to extract and analyze a component with max nodes.
+```{r}
+is_connected(EliteNet)
+```
+
+# measuring the interconnectivity of my network, i.e., if all the users follow one another 
+```{r}
+graph.density(EliteNet)
+```
+
+# measuring the longest path from one user to another. it is 3, meaning that the most users one user would have go through to the farthest one is 3. 
+```{r}
+diameter(EliteNet)
+```
+
+# which pair has represents the diameter? they are the least connected.
+```{r}
+farthest_vertices(EliteNet)
+```
+# what is the average shortest path a user takes to reach another?
+```{r}
+average.path.length(EliteNet)
+```
+
+# what is the probability that two users who share a follower/following are connected to another similar follower
+```{r}
+transitivity(EliteNet)
+```
+
+# do users connect with other users with similar characteristics? 
+```{r}
+assortativity_degree(EliteNet)
+```
+
+# exploring network actors
+# closeness displays the closeness factor from one vertex to another. the larger the closeness, the more quickly one user can share information with another user. 
+# betweenness shows the number of times a user lies on the shortest path to another user.
+# eigenvector tells how influential (or better connected) a vertex is to another vertex who is also well connected.
+```{r}
+rounding=3
+degr=round(degree(EliteNet,normalized=T),rounding)
+close=round(closeness(EliteNet,normalized=T),rounding)
+betw=round(betweenness(EliteNet,normalized=T),rounding)
+eigv=round(eigen_centrality(EliteNet,scale=F)$vector,rounding)
+
+DFCentrality=as.data.frame(cbind(close,betw,eigv),stringsAsFactors = F)
+names(DFCentrality)=c('Closeness','Betweenness','Eigenvector')
+```
+
+# then, I make the table showing those relationships!
+```{r}
+DFCentrality$Person=row.names(DFCentrality)
+row.names(DFCentrality)=NULL
+head(DFCentrality)
+```
+# I notice a mistake I made earlier--dropping the "Person" column
+```{r}
+df2=DFCentrality[,-5]
+```
+
+# corrected
+```{r}
+df2
+```
+# renaming the column from "person" to "Username" to better reflect the dataset
+```{r}
+names(df2)[4]='Username'
+```
+
+# What does it look like now? 
+```{r}
+df2
+```
+
+# ok, now that the dataset is corrected and we have mapped out the relationships... let's see the final product.
+```{r}
+library(ggplot2)
+ggplot(df2, aes(x=Betweenness, y=Closeness)) + 
+    theme_classic() +
+    geom_text(aes(label=Username,color=Eigenvector)) +
+    scale_colour_gradient(low = "orange", high = "black")
+```
+# it looks like DaveParkerSEA and toddbishop are the most influential and well-connected users in the dataset.
+
+# can this network be disconnected?
+```{r}
+vertex_connectivity(EliteNet)
+```
+# no
+
+# regardless, I am curious to see what the code will say if I ask it who can disconnect the network. I know it will not give me a username.
+```{r}
+(thecut=articulation.points(EliteNet))
+```
+# it did not identify anyone, and gave me a 0 answer. cool!
+
+# fin!
